@@ -1,5 +1,29 @@
 # Compositor
 
+> ### This is a fork
+>
+> Forked from [robbietilton/Compositor](https://github.com/robbietilton/Compositor) at **1.0.4**.
+> The app described below is his. Here is what is different.
+>
+> **It runs on macOS 15 (Sequoia).** Upstream builds for macOS 26 only, so a downloaded release
+> will not open on anything older — the system refuses it before it starts.
+>
+> **Color Dodge and Color Burn render correctly.** Both go through Core Image, which works in a
+> linear color space unless told otherwise, so they came out nowhere near what Photoshop does:
+> over 40% grey, an 80% grey layer dodged to 62% instead of 100%, and burned to 0% instead of 25%.
+>
+> **Levels no longer corrupts semi-transparent pixels.** It divided each channel by its alpha and
+> multiplied it back, which the C routine underneath already does, so every soft edge went through
+> the conversion twice and came out too dark.
+>
+> Both fixes came out of the test suite, which did not compile upstream and so had not been run for
+> some time. It compiles here: 288 tests, all passing, `./scripts/test-local.sh`. Ten of them were
+> asserting rules the app had already moved on from and are rewritten to what the source says today.
+>
+> No feature is added or removed. The only other change to the app itself is a refactor that made
+> reordering a layer reachable from a test. What each change is and why:
+> **[BUILD-SEQUOIA.md](BUILD-SEQUOIA.md)**.
+
 Adobe Photoshop costs too much and tools like GIMP don’t feel familiar enough for me to stay in flow. That’s why I built Compositor.
 
 The goal was to create a full-featured image editor that is completely free and open source. I use Photoshop for compositing and post-processing, so Compositor is built around that workflow - with the tools needed to create a pixel-perfect final image.
@@ -54,10 +78,6 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 - Export JPEG with a live preview (⇧⌥⌘S); Copy Merged
 - Photoshop-style keyboard shortcuts throughout
 
-> **This is a fork.** Upstream requires macOS 26; this one builds and runs on macOS 15 (Sequoia)
-> as well, and carries fixes to Color Dodge / Color Burn and to Levels. What changed and why:
-> [BUILD-SEQUOIA.md](BUILD-SEQUOIA.md).
-
 ## Requirements
 
 - macOS 15 or later
@@ -69,6 +89,9 @@ Open `Compositor.xcodeproj` and run the **Compositor** scheme, or `./scripts/bui
 build and install into `/Applications`. `./scripts/test-local.sh` runs the tests.
 
 ## Releasing
+
+This is upstream's path to a DMG other people can open, and it is signed with upstream's developer
+account. A build for your own Mac needs none of it — use `./scripts/build-local.sh`.
 
 `scripts/release.sh` builds a Release version, signs it with Developer ID, notarizes and staples it, and packages it into `dist/Compositor-<version>.dmg`.
 
