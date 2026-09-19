@@ -54,14 +54,19 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 - Export JPEG with a live preview (⇧⌥⌘S); Copy Merged
 - Photoshop-style keyboard shortcuts throughout
 
+> **This is a fork.** Upstream requires macOS 26; this one builds and runs on macOS 15 (Sequoia)
+> as well, and carries fixes to Color Dodge / Color Burn and to Levels. What changed and why:
+> [BUILD-SEQUOIA.md](BUILD-SEQUOIA.md).
+
 ## Requirements
 
-- macOS 26
+- macOS 15 or later
 - Xcode 26 (to build from source)
 
 ## Building
 
-Open `Compositor.xcodeproj` and run the **Compositor** scheme.
+Open `Compositor.xcodeproj` and run the **Compositor** scheme, or `./scripts/build-local.sh` to
+build and install into `/Applications`. `./scripts/test-local.sh` runs the tests.
 
 ## Releasing
 
