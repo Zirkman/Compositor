@@ -192,7 +192,9 @@ struct CursorTests {
         #expect(thumbnail.frame.size == CGSize(width: 36, height: 27), "the thumbnail takes the 400 × 300 canvas's shape")
         let center = thumbnail.convert(NSPoint(x: thumbnail.bounds.midX, y: thumbnail.bounds.midY), to: nil)
         table.mouseMoved(with: mouse(at: center, flags: .option, in: window))
-        #expect(NSCursor.current !== CanvasView.duplicateCursor, "Option over a thumbnail is for clipping masks")
+        // A thumbnail hands Option straight back to the list (LayerThumbnailButton.updateCursor), so the offer to
+        // duplicate covers the thumbnail too. This asserted the opposite while thumbnails kept Option for themselves.
+        #expect(NSCursor.current === CanvasView.duplicateCursor, "Option over a thumbnail still offers to duplicate")
         table.mouseMoved(with: mouse(at: name, in: window))
         #expect(NSCursor.current === NSCursor.arrow)
     }

@@ -45,9 +45,28 @@ Sparkle will not offer updates. The upstream appcast declares `minimumSystemVers
 macOS 15 install silently stays on whatever was built here. Watch the
 [releases page](https://github.com/robbietilton/Compositor/releases) instead.
 
-## Known upstream breakage
+## Tests
 
-`xcodebuild test` does not compile, on `main` as well as here: `CompositorTests/LayerTests.swift`
-calls `NativeLayerList.Coordinator.moveLayer`, which does not exist in the source. So the test suite
-could not be used to verify this port, and cannot be used to verify changes made here until that is
-fixed.
+    ./scripts/test-local.sh                                  # all 288
+    ./scripts/test-local.sh CompositorTests/SelectionEditTests   # one suite
+
+The suite did not compile on upstream `main` - three test files called API that no longer exists
+(`NativeLayerList.Coordinator.moveLayer`, `SubjectRemoval.run` without its `settings:`,
+`CanvasView.lassoCursors`), so nothing in it had been run for some time. It compiles and passes here.
+
+Twelve tests failed once it ran. Two were real defects and are fixed in this fork:
+
+- **Color Dodge and Color Burn rendered wrong.** Those two modes go through Core Image, which works in a
+  linear space unless told otherwise, so over 40% grey an 80% grey layer dodged to 62% instead of
+  Photoshop's 100% and burned to 0% instead of 25%. `SeparableBlend` now pins the working space to sRGB.
+- **Levels corrupted semi-transparent pixels.** `LevelsFilter.run` divided each channel by its alpha and
+  multiplied it back, and `levels_apply` in `LevelsPixels.c` already does exactly that - so a soft edge went
+  through the conversion twice. The Swift loops are gone.
+
+Both fixes were mutation-checked: putting either defect back turns its test red again.
+
+The other ten were the tests themselves being out of date - the key that switches Lasso/Marquee kind was
+removed from the product, blur stopped clamping at a layer's edge, moving a layer started snapping to the
+canvas, Option over a thumbnail now offers to duplicate. One was not about the code at all: it built key
+events from virtual key codes, so it measured whichever keyboard layout the machine had active and failed on
+a Slovak one. Each is rewritten to the rule the source states, with a comment saying what it used to assert.

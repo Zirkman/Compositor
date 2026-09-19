@@ -26,10 +26,19 @@ struct FilterTests {
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue))
         pixels.draw(result, in: CGRect(x: 0, y: 0, width: result.width, height: result.height))
         let bytes = try #require(pixels.data).assumingMemoryBound(to: UInt8.self)
-        func alpha(_ x: Int) -> Int { Int(bytes[(10 * result.width + x) * 4 + 3]) }
-        #expect(alpha(0) == 255)                  // the layer's own border doesn't fade
-        #expect(alpha(20) > 20 && alpha(20) < 235) // the hard edge is now soft
-        #expect(alpha(38) == 0)
+        // The blur is not clamped at the layer's edge: the layer is given room, the blur spreads into it and
+        // whatever stays empty is cut away again (Filters.swift, `growForBlur` / `PixelFilter.trimmed`). So the
+        // layer no longer sits at 0,0 and its pixels are not where they were - this used to read fixed columns
+        // of a 40-wide result, from when the blur smeared the border outwards and stopped there.
+        let origin = try #require(session.activeLayer?.transform.origin)
+        #expect(origin != .zero, "the layer was given room to spread into: origin \(origin)")
+        let all = (0..<(result.width * result.height)).map { Int(bytes[$0 * 4 + 3]) }
+        let middle = (0..<result.width).map { Int(bytes[(result.height / 2 * result.width + $0) * 4 + 3]) }
+        #expect(all.max() == 255, "the block's inside is untouched")
+        #expect(try #require(middle.first) > 0,
+                "the blur spread past the old border instead of stopping at it")
+        #expect(middle.contains { $0 > 20 && $0 < 235 }, "the hard edge is now soft")
+        #expect(try #require(middle.last) < 20, "and it fades out on the far side")
     }
 
     @Test func motionBlurStreaksAlongItsAngleCounterclockwiseFromHorizontal() throws {
