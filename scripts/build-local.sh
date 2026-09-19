@@ -29,7 +29,19 @@ BUILT="$WORK/Build/Products/Release/$APP.app"
 codesign --verify --deep --strict "$BUILT"
 
 echo "==> Installing to $DEST"
-osascript -e "tell application \"$APP\" to quit" 2>/dev/null || true
+# Ask it to quit rather than killing it, then give up instead of waiting forever: an unsaved
+# document puts a save dialog on screen, and that is the user's to answer, not this script's.
+if pgrep -qf "$DEST/Contents/MacOS/$APP"; then
+  osascript -e "tell application \"$APP\" to quit" 2>/dev/null || true
+  for _ in {1..10}; do
+    pgrep -qf "$DEST/Contents/MacOS/$APP" || break
+    sleep 1
+  done
+  if pgrep -qf "$DEST/Contents/MacOS/$APP"; then
+    echo "$APP is still running - answer its save dialog, or quit it, then run this again." >&2
+    exit 1
+  fi
+fi
 rm -rf "$DEST"
 cp -R "$BUILT" "$DEST"
 xattr -cr "$DEST"
