@@ -21,50 +21,7 @@ struct ContentView: View {
     }
     var body: some View {
         VStack(spacing: 0) {
-            if session.tool == .move {
-                TransformInspector(session: session).id(session.activeLayerID)
-                Divider()
-            }
-            if session.tool.isBrushTool {
-                BrushControls(session: session)
-                Divider()
-            }
-            if session.tool.isSelectionTool {
-                LassoControls(session: session)
-                Divider()
-            }
-            if session.tool == .gradient {
-                GradientControls(session: session)
-                Divider()
-            }
-            if session.tool == .shape {
-                ShapeControls(session: session)
-                Divider()
-            }
-            if session.tool == .eyedropper {
-                HStack(spacing: 16) {
-                    Text("Eyedropper").font(ToolHeaderStyle.titleFont)
-                    Toggle("Sample Ring", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
-                    Spacer()
-                }.padding(.horizontal, 18).toolHeaderBar()
-                Divider()
-            }
-            if session.tool == .hand || session.tool == .zoom {
-                NavigationToolHeader(session: session)
-                Divider()
-            }
-            if session.tool == .crop {
-                CropControls(session: session)
-                Divider()
-            }
-            // No tool (A) keeps the header, so the canvas doesn't jump.
-            if session.tool == .idle {
-                HStack(spacing: 16) {
-                    Text("Select a tool").font(ToolHeaderStyle.titleFont)
-                    Spacer()
-                }.padding(.horizontal, 18).toolHeaderBar()
-                Divider()
-            }
+            toolHeaders
             HStack(spacing: 0) {
                 toolRail
                 Divider()
@@ -117,42 +74,7 @@ struct ContentView: View {
         .onAppear { applicationDelegate?.showEditor = { openWindow(id: "editor") } }
         .preferredColorScheme(.dark)
         .navigationTitle(session.projectURL?.deletingPathExtension().lastPathComponent ?? "Untitled")
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button { requestNewCanvas() } label: { Label("New canvas", systemImage: "plus") }
-                    .help("New canvas (⌘N)").accessibilityIdentifier("newCanvasToolbar")
-                    .disabled(session.isImporting || session.showsBusy || session.levels != nil)
-                    .modifier(NewProjectDropTarget(workspace: applicationDelegate?.workspace))
-            }
-            ToolbarSpacer(.fixed, placement: .navigation)
-            if let workspace = applicationDelegate?.workspace {
-                ToolbarItem(placement: .navigation) {
-                    ProjectTabStrip(workspace: workspace)
-                        // As wide as the toolbar allows: the window less the traffic lights and New button before it
-                        // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
-                        // strip scrolls instead.
-                        .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
-                }
-                .sharedBackgroundVisibility(.hidden)
-            }
-            // Absorb all remaining navigation-toolbar width before the zoom controls.
-            // Without this spacer, the growing tab strip pushes the primary actions left.
-            ToolbarSpacer(.flexible, placement: .navigation)
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button("Fit") { session.fit() }.help("Fit canvas in window (⌘0)")
-                    .accessibilityIdentifier("fitCanvas").disabled(session.document == nil)
-                Button("100%") { session.zoom(to: 1) }.help("Actual pixels (⌘1)")
-                    .accessibilityIdentifier("actualPixels").disabled(session.document == nil)
-            }
-            ToolbarItemGroup(placement: .primaryAction) {
-                Button { session.zoom(to: session.viewport.zoom * 1.25) } label: {
-                    Image(systemName: "plus.magnifyingglass")
-                }.help("Zoom in (⌘+)").disabled(session.document == nil)
-                Button { session.zoom(to: session.viewport.zoom / 1.25) } label: {
-                    Image(systemName: "minus.magnifyingglass")
-                }.help("Zoom out (⌘−)").disabled(session.document == nil)
-            }
-        }
+        .toolbar { editorToolbar }
         .onChange(of: session.levels == nil) { _, closed in
             if closed { levelsPanel.close() }
             else {
@@ -202,6 +124,89 @@ struct ContentView: View {
         if let applicationDelegate { Task { await applicationDelegate.projects.newCanvas() } }
         else { session.clearProject() }
     }
+    @ViewBuilder private var toolHeaders: some View {
+            if session.tool == .move {
+                TransformInspector(session: session).id(session.activeLayerID)
+                Divider()
+            }
+            if session.tool.isBrushTool {
+                BrushControls(session: session)
+                Divider()
+            }
+            if session.tool.isSelectionTool {
+                LassoControls(session: session)
+                Divider()
+            }
+            if session.tool == .gradient {
+                GradientControls(session: session)
+                Divider()
+            }
+            if session.tool == .shape {
+                ShapeControls(session: session)
+                Divider()
+            }
+            if session.tool == .eyedropper {
+                HStack(spacing: 16) {
+                    Text("Eyedropper").font(ToolHeaderStyle.titleFont)
+                    Toggle("Sample Ring", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
+                    Spacer()
+                }.padding(.horizontal, 18).toolHeaderBar()
+                Divider()
+            }
+            if session.tool == .hand || session.tool == .zoom {
+                NavigationToolHeader(session: session)
+                Divider()
+            }
+            if session.tool == .crop {
+                CropControls(session: session)
+                Divider()
+            }
+            // No tool (A) keeps the header, so the canvas doesn't jump.
+            if session.tool == .idle {
+                HStack(spacing: 16) {
+                    Text("Select a tool").font(ToolHeaderStyle.titleFont)
+                    Spacer()
+                }.padding(.horizontal, 18).toolHeaderBar()
+                Divider()
+            }
+    }
+
+    @ToolbarContentBuilder private var editorToolbar: some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            Button { requestNewCanvas() } label: { Label("New canvas", systemImage: "plus") }
+                .help("New canvas (⌘N)").accessibilityIdentifier("newCanvasToolbar")
+                .disabled(session.isImporting || session.showsBusy || session.levels != nil)
+                .modifier(NewProjectDropTarget(workspace: applicationDelegate?.workspace))
+        }
+        if #available(macOS 26.0, *) { ToolbarSpacer(.fixed, placement: .navigation) }
+        if let workspace = applicationDelegate?.workspace {
+            ToolbarItem(placement: .navigation) {
+                ProjectTabStrip(workspace: workspace)
+                    // As wide as the toolbar allows: the window less the traffic lights and New button before it
+                    // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
+                    // strip scrolls instead.
+                    .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
+            }
+        }
+        // Absorb all remaining navigation-toolbar width before the zoom controls.
+        // Without this spacer, the growing tab strip pushes the primary actions left.
+        if #available(macOS 26.0, *) { ToolbarSpacer(.flexible, placement: .navigation) }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button("Fit") { session.fit() }.help("Fit canvas in window (⌘0)")
+                .accessibilityIdentifier("fitCanvas").disabled(session.document == nil)
+            Button("100%") { session.zoom(to: 1) }.help("Actual pixels (⌘1)")
+                .accessibilityIdentifier("actualPixels").disabled(session.document == nil)
+        }
+        ToolbarItemGroup(placement: .primaryAction) {
+            Button { session.zoom(to: session.viewport.zoom * 1.25) } label: {
+                Image(systemName: "plus.magnifyingglass")
+            }.help("Zoom in (⌘+)").disabled(session.document == nil)
+            Button { session.zoom(to: session.viewport.zoom / 1.25) } label: {
+                Image(systemName: "minus.magnifyingglass")
+            }.help("Zoom out (⌘−)").disabled(session.document == nil)
+        }
+    }
+
     private var toolRail: some View {
         // Scrolls when the window is too short for every tool, rather than pushing the bars above and below away.
         ScrollView(.vertical) {
