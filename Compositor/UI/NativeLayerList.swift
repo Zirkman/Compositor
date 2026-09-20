@@ -171,8 +171,8 @@ struct NativeLayerList: NSViewRepresentable {
             let intoFolder = dropOperation == .on && rows.indices.contains(row) && rows[row].isGroup
             return place(ids, at: row, intoFolder: intoFolder, copying: copying)
         }
-        /// Reorders one layer to the row a drop above it would use. The list's move on its own, without the
-        /// dragging plumbing, so anything that picks a row by itself — a test, a keyboard command — can reach it.
+        /// Reorders one layer to the row a drop above it would use: the list's own move, without the dragging
+        /// plumbing, so anything that picks a row by itself — a test, a keyboard command — can reach it.
         @discardableResult func moveLayer(_ id: UUID, to row: Int) -> Bool {
             // `session.placeLayer` already refuses an unknown layer and a session that cannot edit layers, so the
             // only thing left to reject is a row that is not a drop target. `place` treats a row past the end as
