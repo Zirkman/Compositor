@@ -175,7 +175,9 @@ struct NativeLayerList: NSViewRepresentable {
         /// dragging plumbing, so anything that picks a row by itself — a test, a keyboard command — can reach it.
         @discardableResult func moveLayer(_ id: UUID, to row: Int) -> Bool {
             // `session.placeLayer` already refuses an unknown layer and a session that cannot edit layers, so the
-            // only thing left to reject here is a row that is not a drop target - `place` would index past `rows`.
+            // only thing left to reject is a row that is not a drop target. `place` treats a row past the end as
+            // the bottom, so what this actually catches is a negative one; the bound is written the way
+            // `validateDrop` writes it, so the two accept the same rows.
             guard (0...rows.count).contains(row) else { return false }
             return place([id], at: row, intoFolder: false, copying: false)
         }

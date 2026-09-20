@@ -384,9 +384,14 @@ struct SelectionTests {
         #expect(try coverage(session, 30, 30) == 255) // a box grown from its center would have reached here
     }
 
-    /// M chooses the Marquee; pressed again it switches Rectangle and Ellipse, and the shape sticks.
-    /// `pressMarqueeKey` documents the rule: M picks the Marquee in whichever shape it was last set to, and the
-    /// shape is switched in the tool bar only. M used to cycle Rectangle/Ellipse; this test asserted that.
+    /// M chooses the Marquee in whichever shape it was last set to; the shape is switched in the tool bar only
+    /// (`pressMarqueeKey`). M used to cycle Rectangle/Ellipse, and this test asserted that.
+    ///
+    /// It also asserted that holding M down did not keep switching, which is gone rather than moved: the
+    /// `!event.isARepeat` guard in `EditorCanvas` cannot be observed any more. `pressMarqueeKey` is
+    /// `selectTool(.marquee)`, and `selectTool` returns early once that tool is current, so removing the guard
+    /// would change nothing a test could see. An assertion for it would pass whether the guard were there or
+    /// not, which is worse than not having one.
     @Test func mKeyChoosesTheMarqueeAndKeepsTheShapeLastSet() throws {
         let session = makeSession()
         let view = CanvasView(session: session)
@@ -446,8 +451,8 @@ struct SelectionTests {
         #expect(try coverage(session, 65, 45) == 255 && coverage(session, 10, 10) == 255, "still adding")
     }
 
-    /// L chooses the Lasso; pressed again it switches Freehand and Polygonal, and the mode sticks.
-    /// The same rule as M: L picks the Lasso, and Freehand/Polygonal is switched in the tool bar only.
+    /// L chooses the Lasso, and Freehand/Polygonal is switched in the tool bar only - the same rule as M, and
+    /// the same story about the repeat assertion; see `mKeyChoosesTheMarqueeAndKeepsTheShapeLastSet`.
     @Test func lKeyChoosesTheLassoAndKeepsTheModeLastSet() throws {
         let session = makeSession()
         session.selectTool(.marquee)

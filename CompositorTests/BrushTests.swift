@@ -96,9 +96,10 @@ struct BrushTests {
                               backing: .buffered, defer: false)
         window.contentView = view
         #expect(window.makeFirstResponder(view))
-        // Spelled out rather than built from a virtual key code: what a key code produces depends on the
-        // keyboard layout the machine happens to have active - on a Slovak layout key 30 with Shift is "(",
-        // not "}" - and the canvas matches on the character, so the test would fail on the developer's layout.
+        // Spelled out rather than built from a virtual key code. The canvas matches on the character, and what
+        // a key code produces depends on the keyboard layout the machine happens to have active, so building
+        // the event from a code measures the layout rather than the code - this failed on a Slovak layout,
+        // where key 30 with Shift is "(" and not "}", and it would fail the same way on any non-US layout.
         func press(_ key: CGKeyCode, shift: Bool) throws {
             let characters = key == 30 ? (shift ? "}" : "]") : (shift ? "{" : "[")
             view.keyDown(with: try #require(NSEvent.keyEvent(with: .keyDown, location: .zero,

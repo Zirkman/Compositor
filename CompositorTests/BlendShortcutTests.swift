@@ -31,8 +31,10 @@ struct BlendShortcutTests {
         #expect(window.makeFirstResponder(nil))
         try press(forward: false)
         try press(forward: false)
-        // Back past Normal, wrapping to the last mode. Named rather than spelled out: the list has grown
-        // before (this read `.colorBurn` while that was last) and the claim is the wrap, not which mode it is.
+        // Back past Normal, wrapping to the last mode. Named rather than spelled out: the list has grown before
+        // (this read `.colorBurn` while that was last) and the claim is the wrap, not which mode it is. Its
+        // blind spot, stated plainly: `cycleBlendMode` steps through `allCases` too, so this cannot catch the
+        // list being reordered. The step to `.multiply` above is what pins the order.
         #expect(mode() == LayerBlendMode.allCases.last)
         session.undo()
         #expect(mode() == .normal)

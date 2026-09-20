@@ -125,50 +125,60 @@ struct ContentView: View {
         else { session.clearProject() }
     }
     @ViewBuilder private var toolHeaders: some View {
-            if session.tool == .move {
-                TransformInspector(session: session).id(session.activeLayerID)
-                Divider()
-            }
-            if session.tool.isBrushTool {
-                BrushControls(session: session)
-                Divider()
-            }
-            if session.tool.isSelectionTool {
-                LassoControls(session: session)
-                Divider()
-            }
-            if session.tool == .gradient {
-                GradientControls(session: session)
-                Divider()
-            }
-            if session.tool == .shape {
-                ShapeControls(session: session)
-                Divider()
-            }
-            if session.tool == .eyedropper {
-                HStack(spacing: 16) {
-                    Text("Eyedropper").font(ToolHeaderStyle.titleFont)
-                    Toggle("Sample Ring", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
-                    Spacer()
-                }.padding(.horizontal, 18).toolHeaderBar()
-                Divider()
-            }
-            if session.tool == .hand || session.tool == .zoom {
-                NavigationToolHeader(session: session)
-                Divider()
-            }
-            if session.tool == .crop {
-                CropControls(session: session)
-                Divider()
-            }
-            // No tool (A) keeps the header, so the canvas doesn't jump.
-            if session.tool == .idle {
-                HStack(spacing: 16) {
-                    Text("Select a tool").font(ToolHeaderStyle.titleFont)
-                    Spacer()
-                }.padding(.horizontal, 18).toolHeaderBar()
-                Divider()
-            }
+        if session.tool == .move {
+            TransformInspector(session: session).id(session.activeLayerID)
+            Divider()
+        }
+        if session.tool.isBrushTool {
+            BrushControls(session: session)
+            Divider()
+        }
+        if session.tool.isSelectionTool {
+            LassoControls(session: session)
+            Divider()
+        }
+        if session.tool == .gradient {
+            GradientControls(session: session)
+            Divider()
+        }
+        if session.tool == .shape {
+            ShapeControls(session: session)
+            Divider()
+        }
+        if session.tool == .eyedropper {
+            HStack(spacing: 16) {
+                Text("Eyedropper").font(ToolHeaderStyle.titleFont)
+                Toggle("Sample Ring", isOn: $session.showsSampleRing).toggleStyle(.checkbox)
+                Spacer()
+            }.padding(.horizontal, 18).toolHeaderBar()
+            Divider()
+        }
+        if session.tool == .hand || session.tool == .zoom {
+            NavigationToolHeader(session: session)
+            Divider()
+        }
+        if session.tool == .crop {
+            CropControls(session: session)
+            Divider()
+        }
+        // No tool (A) keeps the header, so the canvas doesn't jump.
+        if session.tool == .idle {
+            HStack(spacing: 16) {
+                Text("Select a tool").font(ToolHeaderStyle.titleFont)
+                Spacer()
+            }.padding(.horizontal, 18).toolHeaderBar()
+            Divider()
+        }
+    }
+
+    private func tabStrip(_ workspace: ProjectWorkspace) -> some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            ProjectTabStrip(workspace: workspace)
+                // As wide as the toolbar allows: the window less the traffic lights and New button before it
+                // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
+                // strip scrolls instead.
+                .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
+        }
     }
 
     @ToolbarContentBuilder private var editorToolbar: some ToolbarContent {
@@ -180,13 +190,10 @@ struct ContentView: View {
         }
         if #available(macOS 26.0, *) { ToolbarSpacer(.fixed, placement: .navigation) }
         if let workspace = applicationDelegate?.workspace {
-            ToolbarItem(placement: .navigation) {
-                ProjectTabStrip(workspace: workspace)
-                    // As wide as the toolbar allows: the window less the traffic lights and New button before it
-                    // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
-                    // strip scrolls instead.
-                    .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
-            }
+            // sharedBackgroundVisibility is macOS 26 only, and it is the whole point of the item on 26: without
+            // it the strip sits on the toolbar's own background. Both branches build the same item.
+            if #available(macOS 26.0, *) { tabStrip(workspace).sharedBackgroundVisibility(.hidden) }
+            else { tabStrip(workspace) }
         }
         // Absorb all remaining navigation-toolbar width before the zoom controls.
         // Without this spacer, the growing tab strip pushes the primary actions left.

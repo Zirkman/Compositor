@@ -345,9 +345,10 @@ struct SelectionEditTests {
 
     /// This used to hold a wall-clock budget as well (1.5 s for a 4000 x 3000 invert, whole and through a
     /// selection). It cannot measure the code from inside this suite: the tests run in parallel and this is the
-    /// biggest image in the run, so the selection path - which goes through Core Image - takes 0.5 s on its own
-    /// and 60 s with ~290 other tests competing for the machine. Measure it with
-    /// `-only-testing:CompositorTests/SelectionEditTests` instead, where the two are within a factor of four.
+    /// biggest image in the run. Measured against the full suite on an M3, the whole-image invert took 0.19 s
+    /// and the selection path - which goes through Core Image - took 41.5 s, so the assertion reported the
+    /// machine's load rather than the code. Measure it with `-only-testing:CompositorTests/SelectionEditTests`
+    /// instead, on a machine that is otherwise idle.
     @Test func invertHandlesLargeImagesAndUniformMasksWithASelection() async throws {
         let session = makeSession(width: 4000, height: 3000)
         let context = try BrushRaster.context(width: 4000, height: 3000, mask: false)

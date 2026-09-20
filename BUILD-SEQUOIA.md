@@ -36,8 +36,8 @@ parallel, and its biggest images take tens of times longer under that load than 
 |---|---|---|
 | `Compositor.xcodeproj/project.pbxproj` | `MACOSX_DEPLOYMENT_TARGET` 26.5 → 15.0, in all four configurations | — |
 | `Compositor/UI/BlendModePicker.swift` | `NSPopUpButton.borderShape` is macOS 26+, wrapped in `if #available` | the blend-mode pop-up is rectangular instead of a capsule |
-| `Compositor/ContentView.swift` | `ToolbarSpacer` (macOS 26+) behind `if #available`; `.sharedBackgroundVisibility(.hidden)` removed; `body` split into `toolHeaders` + `editorToolbar` | toolbar spacing between the tab strip and the zoom controls is less precise |
-| `Compositor/Document/ImageAdjustments.swift` | the gradient-map lookup table written out in explicit steps, same arithmetic | none — the two versions were compared byte for byte over five colour pairs, including out-of-range clamping |
+| `Compositor/ContentView.swift` | `ToolbarSpacer` and `.sharedBackgroundVisibility(.hidden)` (both macOS 26+) behind `if #available`, the tab-strip item built by one `tabStrip(_:)` helper both branches call; `body` split into `toolHeaders` + `editorToolbar` | toolbar spacing between the tab strip and the zoom controls is less precise; on macOS 26 nothing changes at all |
+| `Compositor/Document/ImageAdjustments.swift` | the gradient-map lookup table written out in explicit steps, same arithmetic | none — the table was compared against the original formula over 100 colour pairs, all 76 800 bytes identical, including out-of-range clamping |
 
 The `body` split is not cosmetic. At deployment target 15.0 the SwiftUI overload set the type-checker
 has to search grows, and it gives up on the original single-expression `body` with "unable to
@@ -67,9 +67,10 @@ It did not compile on upstream `main`: three test files called API that no longe
 layer was only reachable through an `NSDraggingInfo`, which is what made its test uncompilable; the
 drop handler now calls the same two methods.
 
-Twelve tests failed once the suite ran. Two were the defects above. The other ten were the tests
-themselves being out of date, and each is rewritten to the rule the source states, with a comment
-recording what it used to assert:
+Eleven tests fail at the point where the suite first compiles (277 pass). Two are the defects above.
+The other nine are the tests themselves being out of date; a tenth stale assertion, the cursor one,
+could not fail because its file did not compile, and is rewritten in the same commit. Each is
+rewritten to the rule the source states, with a comment recording what it used to assert:
 
 - The `L` and `M` keys no longer switch Lasso mode and Marquee shape. The kind is set in the tool
   bar and the key only picks the tool (`Selection.swift`, `pressLassoKey` / `pressMarqueeKey`).
@@ -86,9 +87,12 @@ recording what it used to assert:
 - One failure was not about the code at all: the brush-hardness test built key events from virtual
   key codes, so it measured whichever keyboard layout the machine had active — on a Slovak layout,
   key 30 with Shift is `(`, not `}`. It spells the characters out now.
-- One measured the machine rather than the code: a 1.5 s budget for inverting a 4000 × 3000 layer,
-  which takes 0.5 s on its own and 60 s with ~290 other tests competing for the machine. The timing
+- One measured the machine rather than the code: a 1.5 s budget for inverting a 4000 × 3000 layer.
+  Against the full suite the whole-image invert took 0.19 s and the selection path 41.5 s. The timing
   is gone and the correctness assertions stay; measure it with `-only-testing` when it matters.
+- Two tests were renamed, because a test's name is one of its assertions: the blur one promised the
+  border did not fade, which is exactly what stopped being true, and the cursor one promised Option
+  over a thumbnail was for clipping masks.
 
 ## Keeping up with upstream
 

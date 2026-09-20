@@ -165,9 +165,10 @@ struct CursorTests {
         session.cancelTransform()
     }
 
-    /// In the layer list, Option over a thumbnail is for clipping masks; over the rest of a row it offers
-    /// to duplicate the layer by dragging.
-    @Test func optionOverALayerRowOffersDuplicatingExceptOverThumbnails() throws {
+    /// In the layer list, Option offers to duplicate the layer by dragging — over a row's name and over its
+    /// thumbnail alike, since the thumbnail hands Option back to the list. This comment, and the test's name,
+    /// used to say a thumbnail kept Option for clipping masks.
+    @Test func optionOverALayerRowOffersDuplicatingIncludingOverThumbnails() throws {
         let session = EditorSession()
         session.createDocument(width: 400, height: 300)
         session.addBlankLayer()

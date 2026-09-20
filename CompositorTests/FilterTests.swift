@@ -4,7 +4,7 @@ import Testing
 
 @MainActor
 struct FilterTests {
-    @Test func gaussianBlurSoftensAHardEdgeWithoutFadingTheBordersAsOneUndoStep() async throws {
+    @Test func gaussianBlurSoftensAHardEdgeAndSpreadsPastTheLayerEdgeAsOneUndoStep() async throws {
         let session = EditorSession()
         session.createDocument(width: 40, height: 20)
         // Left half opaque white, right half transparent.
@@ -27,16 +27,20 @@ struct FilterTests {
         pixels.draw(result, in: CGRect(x: 0, y: 0, width: result.width, height: result.height))
         let bytes = try #require(pixels.data).assumingMemoryBound(to: UInt8.self)
         // The blur is not clamped at the layer's edge: the layer is given room, the blur spreads into it and
-        // whatever stays empty is cut away again (Filters.swift, `growForBlur` / `PixelFilter.trimmed`). So the
-        // layer no longer sits at 0,0 and its pixels are not where they were - this used to read fixed columns
-        // of a 40-wide result, from when the blur smeared the border outwards and stopped there.
+        // whatever stays empty is cut away again (Filters.swift, `growForBlur` / `PixelFilter.trimmed`). The
+        // 40 x 20 layer, opaque across its full height for its left half, comes out 36 x 36 at (-8, -8). This
+        // used to read three fixed columns of a 40-wide result and assert that the border did not fade, from
+        // when the blur smeared outwards and stopped at the edge; the test's name said so too.
         let origin = try #require(session.activeLayer?.transform.origin)
-        #expect(origin != .zero, "the layer was given room to spread into: origin \(origin)")
-        let all = (0..<(result.width * result.height)).map { Int(bytes[$0 * 4 + 3]) }
+        #expect(origin.x < 0 && origin.y < 0, "the layer grew on every side: origin \(origin)")
+        // The strongest evidence that the blur left the layer: it was 20 tall and opaque top to bottom, so it
+        // could not have grown vertically unless the blur went past the edge and the layer was given room.
+        #expect(result.height > 20, "the blur spread past the layer's edge: height \(result.height)")
+        #expect(result.width < 40, "and the half that stayed empty was trimmed away: width \(result.width)")
         let middle = (0..<result.width).map { Int(bytes[(result.height / 2 * result.width + $0) * 4 + 3]) }
-        #expect(all.max() == 255, "the block's inside is untouched")
-        #expect(try #require(middle.first) > 0,
-                "the blur spread past the old border instead of stopping at it")
+        // 250 rather than 255: the block's centre is 10 px from its edges, which at this radius leaves it a
+        // fraction of a level below full opacity. What would break here is the inside fading, not rounding.
+        #expect(try #require(middle.max()) >= 250, "the block's inside is untouched: \(middle.max() ?? -1)")
         #expect(middle.contains { $0 > 20 && $0 < 235 }, "the hard edge is now soft")
         #expect(try #require(middle.last) < 20, "and it fades out on the far side")
     }
