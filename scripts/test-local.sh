@@ -12,6 +12,10 @@ PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 TARGET="${1:-CompositorTests}"
 WORK="$HOME/Library/Caches/CompositorLocalBuild"
 
+# xcodebuild refuses to start at all if the bundle is already there, and its error looks like a test failure
+# rather than a run that never happened - which is worse, because the stale bundle still reads as passing.
+rm -rf "$WORK/TestResults.xcresult"
+
 xcodebuild test -quiet \
   -project "$PROJECT_DIR/Compositor.xcodeproj" -scheme Compositor -configuration Debug \
   -derivedDataPath "$WORK" -destination 'platform=macOS' \
