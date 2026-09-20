@@ -56,7 +56,7 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 
 ## Requirements
 
-- macOS 26
+- macOS 15 or later
 - Xcode 26 (to build from source)
 
 ## Building
