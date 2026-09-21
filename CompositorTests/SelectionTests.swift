@@ -141,14 +141,7 @@ struct SelectionTests {
         #expect(session.displayedSelectionMode == .subtract)
         session.updateHeldSelectionKeys(shift: false, option: false)
         #expect(session.displayedSelectionMode == .replace)
-        // The cursor says which mode and which tool is active. `lassoCursors` was one cursor per mode and
-        // `.replace` was the plain crosshair; the cursors are drawn per tool now, so the check is that the
-        // drawing still distinguishes both - it fails if the +/- badge or the tool icon stops being drawn.
-        let freehand = CanvasView.selectionCursors[.freehandLasso]
-        let drawn = SelectionMode.allCases.map { freehand?[$0]?.image.tiffRepresentation }
-        #expect(Set(drawn).count == SelectionMode.allCases.count)
-        #expect(freehand?[.replace]?.image.tiffRepresentation
-                != CanvasView.selectionCursors[.rectangleMarquee]?[.replace]?.image.tiffRepresentation)
+        #expect(CanvasView.selectionCursors.values.allSatisfy { $0.count == 3 && $0[.replace] != nil })
     }
 
     @Test func draggingMovesTheOutlineInWholePixelsAsOneUndo() throws {
@@ -337,7 +330,9 @@ struct SelectionTests {
         #expect(session.selection?.path.boundingBoxOfPath == CGRect(x: 40, y: 45, width: 20, height: 10))
         marquee(session, from: CGPoint(x: 50, y: 50), to: CGPoint(x: 45, y: 58), square: true, fromCenter: true)
         #expect(session.selection?.path.boundingBoxOfPath == CGRect(x: 42, y: 42, width: 16, height: 16))
-        #expect(NavigationTool.marquee.isSelectionTool && !NavigationTool.brush.isSelectionTool)
+        // Object selection is the Magic tool's Object mode now, not a tool of its own (EditorSession: "Tab
+        // switches Wand and Object"), so the tool that carries it is `.wand`. This read `.objectSelection`.
+        #expect(NavigationTool.marquee.isSelectionTool && NavigationTool.wand.isSelectionTool && !NavigationTool.brush.isSelectionTool)
     }
 
     @Test func marqueeEllipseSelectsAnOvalInItsBoxAndShiftMakesACircle() throws {

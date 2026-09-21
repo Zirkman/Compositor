@@ -61,6 +61,7 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 - Clone Stamp, aligned or not, sampling one layer or all of them
 - Blur tool, on pixels or masks
 - Gradient tool and Shape tool (rectangles, rounded rectangles and ellipses)
+- Type tool (T): inline multiline editing in draggable, resizable paragraph boxes; font, size, color, alignment and spacing in the tool header; transform text and use it as a clipping mask
 - Eyedropper and a full color picker
 
 ### Adjustments and filters
@@ -74,7 +75,7 @@ Because it’s open source, you can download the Xcode project and add, remove, 
 - Crop with snapping, and Option for symmetric cropping
 - Canvas Size and Image Size
 - Sharp high-quality downsampling when zoomed out, and a pixel grid when zoomed in
-- Import JPEG, PNG, HEIC and TIFF — including dropped screenshots and images from other apps
+- Import JPEG, PNG, HEIC, TIFF and Photoshop PSD (8-bit RGB only; not PSB or CMYK). PSD folders, masks, a subset of blend modes, and fill rectangles/ellipses stay editable; text and other vectors become pixels. A conversion report is shown before anything is applied.
 - Export JPEG with a live preview (⇧⌥⌘S); Copy Merged
 - Photoshop-style keyboard shortcuts throughout
 
