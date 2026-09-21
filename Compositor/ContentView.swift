@@ -157,20 +157,17 @@ struct ContentView: View {
                     .disabled(session.isImporting || session.showsBusy || session.levels != nil)
                     .modifier(NewProjectDropTarget(workspace: applicationDelegate?.workspace))
             }
-            ToolbarSpacer(.fixed, placement: .navigation)
+            // ToolbarSpacer and sharedBackgroundVisibility are macOS 26 only. On 26 the toolbar is exactly what
+            // upstream builds; on 15 the spacing between the tab strip and the zoom controls is less precise.
+            if #available(macOS 26.0, *) { ToolbarSpacer(.fixed, placement: .navigation) }
             if let workspace = applicationDelegate?.workspace {
-                ToolbarItem(placement: .navigation) {
-                    ProjectTabStrip(workspace: workspace)
-                        // As wide as the toolbar allows: the window less the traffic lights and New button before it
-                        // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
-                        // strip scrolls instead.
-                        .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
-                }
-                .sharedBackgroundVisibility(.hidden)
+                // Both branches build the same item; only the macOS 26 modifier differs.
+                if #available(macOS 26.0, *) { tabStrip(workspace).sharedBackgroundVisibility(.hidden) }
+                else { tabStrip(workspace) }
             }
             // Absorb all remaining navigation-toolbar width before the zoom controls.
             // Without this spacer, the growing tab strip pushes the primary actions left.
-            ToolbarSpacer(.flexible, placement: .navigation)
+            if #available(macOS 26.0, *) { ToolbarSpacer(.flexible, placement: .navigation) }
             ToolbarItemGroup(placement: .primaryAction) {
                 Button("Fit") { session.fit() }.help("Fit canvas in window (⌘0)")
                     .accessibilityIdentifier("fitCanvas").disabled(session.document == nil)
@@ -256,6 +253,16 @@ struct ContentView: View {
                 Button("OK") { session.cropError = nil }
             } message: { Text(session.cropError ?? "") }
     }
+    private func tabStrip(_ workspace: ProjectWorkspace) -> some ToolbarContent {
+        ToolbarItem(placement: .navigation) {
+            ProjectTabStrip(workspace: workspace)
+                // As wide as the toolbar allows: the window less the traffic lights and New button before it
+                // and the zoom controls after it. Bounded, so adding tabs never pushes those aside; the
+                // strip scrolls instead.
+                .frame(width: max(200, windowWidth - 352), height: 34, alignment: .center)
+        }
+    }
+
     private func requestNewCanvas() {
         if let applicationDelegate { Task { await applicationDelegate.projects.newCanvas() } }
         else { session.clearProject() }

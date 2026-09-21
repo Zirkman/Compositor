@@ -1,13 +1,15 @@
 # This fork: Compositor on macOS 15 (Sequoia)
 
 A fork of [robbietilton/Compositor](https://github.com/robbietilton/Compositor) that builds and runs
-on macOS 15. Upstream ships for macOS 26 only (`MACOSX_DEPLOYMENT_TARGET = 26.5`, its README:
-"Requirements: macOS 26"), so a downloaded release refuses to open on Sequoia: Launch Services
-rejects it on `LSMinimumSystemVersion`, and the loader would reject the binary's own `minos 26.5`.
+on macOS 15. It tracks upstream's **1.1.8**.
 
-Beyond that it carries two rendering fixes and a test suite that runs again — see **What this fork
-changes**. Add features here as normal commits; keep this file and `scripts/` when merging upstream
-changes in.
+Upstream ships for macOS 26 only (`MACOSX_DEPLOYMENT_TARGET = 26.5`, its README: "Requirements:
+macOS 26"), so a downloaded release refuses to open on Sequoia: Launch Services rejects it on
+`LSMinimumSystemVersion`, and the loader would reject the binary's own `minos 26.5`.
+
+That is the whole reason this fork exists. Four files differ from upstream, all of them saying "do
+the macOS 26 thing when you can". Add features here as normal commits; keep this file, `README.md`
+and `scripts/` when merging upstream changes in.
 
 ## Build and install
 
@@ -22,77 +24,46 @@ the project, and Xcode's Debug configuration already signs ad hoc without the ha
 
 ## Tests
 
-    ./scripts/test-local.sh                                      # all 288
+    ./scripts/test-local.sh                                      # all 329
     ./scripts/test-local.sh CompositorTests/SelectionEditTests   # one suite
 
-All 288 pass. Narrowing the run matters for anything that measures time: the full suite runs in
-parallel, and its biggest images take tens of times longer under that load than on their own.
+327 of 329 pass. The two that fail are `DistortTests` and have nothing to do with macOS 15 — they
+fail on upstream too, and the maintainer has them open: `DistortWarp.isUsable` accepts a bowtie
+quadrilateral the test expects it to refuse, and a distort corner lands at (30, 30) where the test
+wants (30, 10).
+
+Narrowing the run matters for anything that measures time: the full suite runs in parallel, and its
+biggest images take tens of times longer under that load than on their own.
 
 ## What this fork changes
-
-### Making it build and run on macOS 15
 
 | File | Change | Effect on macOS 15 |
 |---|---|---|
 | `Compositor.xcodeproj/project.pbxproj` | `MACOSX_DEPLOYMENT_TARGET` 26.5 → 15.0, in all four configurations | — |
-| `Compositor/UI/BlendModePicker.swift` | `NSPopUpButton.borderShape` is macOS 26+, wrapped in `if #available` | the blend-mode pop-up is rectangular instead of a capsule |
-| `Compositor/ContentView.swift` | `ToolbarSpacer` and `.sharedBackgroundVisibility(.hidden)` (both macOS 26+) behind `if #available`, the tab-strip item built by one `tabStrip(_:)` helper both branches call; `body` split into `toolHeaders` + `editorToolbar` | toolbar spacing between the tab strip and the zoom controls is less precise; on macOS 26 nothing changes at all |
-| `Compositor/Document/ImageAdjustments.swift` | the gradient-map lookup table written out in explicit steps, same arithmetic | none — the table was compared against the original formula over 100 colour pairs, all 76 800 bytes identical, including out-of-range clamping |
+| `Compositor/UI/BlendModePicker.swift` | `NSPopUpButton.borderShape` is macOS 26+, behind `if #available` | the blend-mode pop-up is rectangular instead of a capsule |
+| `Compositor/UI/TypeControls.swift` | the same, for the Type tool's font pop-up | the font pop-up is rectangular instead of a capsule |
+| `Compositor/ContentView.swift` | `ToolbarSpacer` and `.sharedBackgroundVisibility(.hidden)` (both macOS 26+) behind `if #available`, with the tab-strip item built by one `tabStrip(_:)` helper both branches call | toolbar spacing between the tab strip and the zoom controls is less precise |
 
-The `body` split is not cosmetic. At deployment target 15.0 the SwiftUI overload set the type-checker
-has to search grows, and it gives up on the original single-expression `body` with "unable to
-type-check this expression in reasonable time". The same happened to the gradient-map table.
+On macOS 26 none of this changes anything: every 26-only call is still made there, on the same
+items, in the same order.
 
-### Two defects the tests found
+## What used to be here and is upstream now
 
-Both are visible in the product, and both are mutation-checked: putting either one back turns its
-test red again.
+This fork carried more than the deployment target. All of it was merged upstream in
+[#34](https://github.com/robbietilton/Compositor/pull/34) and is no longer a difference:
 
-- **Color Dodge and Color Burn rendered wrong** (`Compositor/Rendering/SeparableBlend.swift`). Those
-  two modes go through Core Image, which works in a linear space unless told otherwise. Over 40%
-  grey, an 80% grey layer dodged to 62% instead of Photoshop's 100%, and burned to 0% instead of
-  25%. The blend now happens in the sRGB the canvas is in.
-- **Levels corrupted semi-transparent pixels** (`Compositor/Document/Levels.swift`). `LevelsFilter.run`
-  divided each channel by its alpha and multiplied it back, and `levels_apply` in `LevelsPixels.c`
-  already does exactly that, so every soft edge went through the conversion twice. The Swift loops
-  are gone.
+- **Color Dodge and Color Burn rendered wrong.** Both go through Core Image, which works in a linear
+  space unless told otherwise. Over 40% grey, an 80% grey layer dodged to 62% instead of Photoshop's
+  100%, and burned to 0% instead of 25%.
+- **Levels corrupted semi-transparent pixels.** `LevelsFilter.run` divided each channel by its alpha
+  and multiplied it back, which `levels_apply` in `LevelsPixels.c` already does, so every soft edge
+  went through the conversion twice.
+- **The test suite did not compile**, so nothing in it had been run for some time, and ten of its
+  tests were asserting rules the app had already moved on from.
 
-### The test suite
-
-It did not compile on upstream `main`: three test files called API that no longer exists
-(`NativeLayerList.Coordinator.moveLayer`, `SubjectRemoval.run` without its `settings:`,
-`CanvasView.lassoCursors`), so nothing in it had been run for some time.
-
-`NativeLayerList` gained `moveLayer(_:to:)` and `place(_:at:intoFolder:copying:)`. Reordering a
-layer was only reachable through an `NSDraggingInfo`, which is what made its test uncompilable; the
-drop handler now calls the same two methods.
-
-Eleven tests fail at the point where the suite first compiles (277 pass). Two are the defects above.
-The other nine are the tests themselves being out of date; a tenth stale assertion, the cursor one,
-could not fail because its file did not compile, and is rewritten in the same commit. Each is
-rewritten to the rule the source states, with a comment recording what it used to assert:
-
-- The `L` and `M` keys no longer switch Lasso mode and Marquee shape. The kind is set in the tool
-  bar and the key only picks the tool (`Selection.swift`, `pressLassoKey` / `pressMarqueeKey`).
-- A blur is no longer clamped at the layer's edge: the layer is given room, the blur spreads into
-  it, and whatever stays empty is cut away (`Filters.swift`, `growForBlur`). The old assertions read
-  fixed columns of an image whose size and origin both change.
-- Moving a layer snaps to the canvas and to other layers within 10 points (`TransformSnap.distance`).
-  A 20 × 10 drag from the middle of a 400 × 300 canvas lands inside that and springs back, so the
-  drags now hold Control, which is what drags freely.
-- Option over a layer's thumbnail offers to duplicate, like the rest of the row: the thumbnail hands
-  Option straight back to the list (`NativeLayerList`, `LayerThumbnailButton.updateCursor`).
-- The blend-mode list grew, so stepping back past Normal wraps to Luminosity, not Color Burn. The
-  test names the claim now (`LayerBlendMode.allCases.last`) instead of spelling out a case.
-- One failure was not about the code at all: the brush-hardness test built key events from virtual
-  key codes, so it measured whichever keyboard layout the machine had active — on a Slovak layout,
-  key 30 with Shift is `(`, not `}`. It spells the characters out now.
-- One measured the machine rather than the code: a 1.5 s budget for inverting a 4000 × 3000 layer.
-  Against the full suite the whole-image invert took 0.19 s and the selection path 41.5 s. The timing
-  is gone and the correctness assertions stay; measure it with `-only-testing` when it matters.
-- Two tests were renamed, because a test's name is one of its assertions: the blur one promised the
-  border did not fade, which is exactly what stopped being true, and the cursor one promised Option
-  over a thumbnail was for clipping masks.
+Upstream also fixed the two Swift type-checker timeouts that used to be carried here
+([#24](https://github.com/robbietilton/Compositor/pull/24)), so `ContentView.body` and the
+gradient-map table are upstream's versions now, not this fork's.
 
 ## Keeping up with upstream
 
@@ -100,9 +71,20 @@ rewritten to the rule the source states, with a comment recording what it used t
     git merge upstream/main
 
 Merge rather than rebase: this fork's `main` is the branch the app is built from, so its history
-should not be rewritten. Expect a conflict in `project.pbxproj` whenever upstream raises its
-deployment target — keep 15.0.
+should not be rewritten.
 
-Sparkle will not offer updates. The upstream appcast declares `minimumSystemVersion 26.5`, so a
-macOS 15 install silently stays on whatever was built here. Watch the
-[releases page](https://github.com/robbietilton/Compositor/releases) instead.
+Two things to expect every time:
+
+- **A conflict in `project.pbxproj` on the deployment target.** Keep 15.0.
+- **A new macOS 26 API somewhere.** A new feature upstream can bring one in, and nothing warns you
+  — the build simply fails with *"is only available in macOS 26.0 or newer"*. That is how
+  `TypeControls` arrived with the Type tool. Build, read the error, guard it, build again. Resolve
+  every other conflict in upstream's favour: this fork should differ only where macOS 15 forces it,
+  and anything else is a cost paid again at every merge.
+
+[#8](https://github.com/robbietilton/Compositor/pull/8) proposes the same macOS 15 support upstream.
+If it is merged, this fork's reason to exist mostly goes away and merging becomes routine.
+
+Sparkle will not offer updates. The upstream appcast declares a `minimumSystemVersion` taken from
+upstream's own deployment target, so a macOS 15 install silently stays on whatever was built here.
+Watch the [releases page](https://github.com/robbietilton/Compositor/releases) instead.

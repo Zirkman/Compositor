@@ -2,26 +2,21 @@
 
 > ### This is a fork
 >
-> Forked from [robbietilton/Compositor](https://github.com/robbietilton/Compositor) at **1.0.4**.
-> The app described below is his. Here is what is different.
+> Forked from [robbietilton/Compositor](https://github.com/robbietilton/Compositor), tracking his
+> **1.1.8**. The app described below is his, and so is almost all of the code.
 >
-> **It runs on macOS 15 (Sequoia).** Upstream builds for macOS 26 only, so a downloaded release
-> will not open on anything older — the system refuses it before it starts.
+> **The one thing this fork does is run on macOS 15 (Sequoia).** Upstream builds for macOS 26 only,
+> so a downloaded release will not open on anything older — the system refuses it before it starts.
+> Four places need a macOS 15 path; everything else is upstream, unchanged.
 >
-> **Color Dodge and Color Burn render correctly.** Both go through Core Image, which works in a
-> linear color space unless told otherwise, so they came out nowhere near what Photoshop does:
-> over 40% grey, an 80% grey layer dodged to 62% instead of 100%, and burned to 0% instead of 25%.
+> It used to carry two rendering fixes as well — Color Dodge and Color Burn blended in the wrong
+> colour space, and Levels converting semi-transparent pixels twice — plus a test suite that did not
+> compile. Those are **upstream now**
+> ([#34](https://github.com/robbietilton/Compositor/pull/34)), so they are no longer a reason to use
+> this fork. 329 tests, 327 passing, `./scripts/test-local.sh`; the two that fail are open upstream
+> in `DistortTests` and are not about macOS 15.
 >
-> **Levels no longer corrupts semi-transparent pixels.** It divided each channel by its alpha and
-> multiplied it back, which the C routine underneath already does, so every soft edge went through
-> the conversion twice and came out too dark.
->
-> Both fixes came out of the test suite, which did not compile upstream and so had not been run for
-> some time. It compiles here: 288 tests, all passing, `./scripts/test-local.sh`. Ten of them were
-> asserting rules the app had already moved on from and are rewritten to what the source says today.
->
-> No feature is added or removed. The only other change to the app itself is a refactor that made
-> reordering a layer reachable from a test. What each change is and why:
+> No feature is added or removed. What each change is and why:
 > **[BUILD-SEQUOIA.md](BUILD-SEQUOIA.md)**.
 
 Adobe Photoshop costs too much and tools like GIMP don’t feel familiar enough for me to stay in flow. That’s why I built Compositor.
