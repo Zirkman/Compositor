@@ -82,9 +82,12 @@ Two things to expect every time:
   every other conflict in upstream's favour: this fork should differ only where macOS 15 forces it,
   and anything else is a cost paid again at every merge.
 
-[#8](https://github.com/robbietilton/Compositor/pull/8) proposes the same macOS 15 support upstream.
-If it is merged, this fork's reason to exist mostly goes away and merging becomes routine.
+Upstream will not take this. [#8](https://github.com/robbietilton/Compositor/pull/8) proposed the
+same macOS 15 support and was closed on 2026-09-21 as a policy decision: the maintainer would rather
+use current AppKit and SwiftUI directly than carry availability fallbacks for an OS two releases
+back. Nothing about the patches — he called the guards cleanly written. So this fork is the only
+place macOS 15 support will live, and it will not become unnecessary on its own.
 
-Sparkle will not offer updates. The upstream appcast declares a `minimumSystemVersion` taken from
-upstream's own deployment target, so a macOS 15 install silently stays on whatever was built here.
-Watch the [releases page](https://github.com/robbietilton/Compositor/releases) instead.
+Sparkle will not offer updates, and that is not a problem to fix: the upstream appcast declares
+`minimumSystemVersion 26.0`, so a macOS 15 install silently stays on whatever was built here. Watch
+the [releases page](https://github.com/robbietilton/Compositor/releases) instead.
